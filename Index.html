@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MiningForYourself</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050510;
+            --glass-bg: rgba(20, 22, 40, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #00f0ff;
+            --accent-secondary: #7000ff;
+            --text-main: #ffffff;
+            --text-muted: #8b9bb4;
+            --epic-glow: #ff007f;
+            --legend-glow: #ffd700;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            background-color: var(--bg-color);
+            background: linear-gradient(125deg, #050510 0%, #1a0b2e 50%, #0a1128 100%);
+            background-size: 200% 200%;
+            animation: bgShift 15s ease infinite;
+            color: var(--text-main); 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            overflow: hidden; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes bgShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Тряска экрана для эпика */
+        @keyframes screenShake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            100% { transform: translate(0px, 0px) rotate(0deg); }
+        }
+        .shake { animation: screenShake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+
+        /* Вспышка */
+        #flash-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; z-index: 999; opacity: 0; pointer-events: none;
+            transition: opacity 0.1s;
+        }
+
+        /* Шапка */
+        header { 
+            padding: 20px 15px; 
+            background: rgba(10, 12, 25, 0.6); 
+            backdrop-filter: blur(20px); 
+            border-bottom: 1px solid var(--glass-border); 
+            text-align: center;
+            z-index: 100;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+        }
+        .logo { 
+            font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1.5rem; 
+            letter-spacing: 1px; margin-bottom: 10px;
+            background: linear-gradient(90deg, var(--accent-primary), #b05aff);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+        }
+        .stats { display: flex; justify-content: space-between; font-size: 1rem; font-weight: 800; padding: 0 10px;}
+        .stat-item { 
+            background: rgba(255,255,255,0.03); padding: 10px 18px; 
+            border-radius: 14px; border: 1px solid var(--glass-border); 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            display: flex; align-items: center; gap: 6px;
+        }
+
+        /* Вкладки */
+        .main-container { flex: 1; overflow: hidden; position: relative; }
+        .tab-content { display: none; height: 100%; overflow-y: auto; padding: 25px 15px 120px; scroll-behavior: smooth;}
+        .tab-content.active { display: flex; flex-direction: column; animation: fadeIn 0.3s ease-out;}
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Кликер */
+        #mining { align-items: center; justify-content: center; }
+        .rock-wrapper {
+            position: relative; width: 280px; height: 280px;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        /* НОВАЯ МОДЕЛЬ КРИСТАЛЛА */
+        .cyber-rock {
+            width: 160px; height: 220px;
+            background: linear-gradient(135deg, #00f0ff 0%, #0055ff 50%, #7000ff 100%);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 0 50px rgba(0, 240, 255, 0.4);
+            animation: crystalFloat 4s ease-in-out infinite, crystalGlow 2s alternate infinite;
+            transition: transform 0.05s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        /* Грани кристалла */
+        .cyber-rock::after {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(to right, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.3) 100%);
+            clip-path: polygon(50% 0%, 100% 25%, 50% 50%, 0% 25%);
+        }
+        .cyber-rock::before {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(0,0,0,0.5) 100%);
+            clip-path: polygon(50% 100%, 100% 50%, 50% 0%, 0% 50%);
+        }
+
+        .cyber-rock:active { transform: scale(0.85); box-shadow: 0 0 80px rgba(0, 240, 255, 0.8); }
+
+        @keyframes crystalFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        @keyframes crystalGlow { 0% { filter: brightness(1); } 100% { filter: brightness(1.3); } }
+
+        /* Частицы */
+        .particle {
+            position: absolute; font-size: 1.8rem; pointer-events: none;
+            animation: flyParticle 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+            z-index: 100; text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        @keyframes flyParticle {
+            0% { opacity: 0; transform: translate(0, 0) scale(0.3); }
+            10% { opacity: 1; transform: translate(calc(var(--mx) * 0.2), calc(var(--my) * 0.2)) scale(1.2); }
+            100% { opacity: 0; transform: translate(var(--mx), var(--my)) rotate(var(--mr)) scale(0.5); }
+        }
+
+        /* Уведомление о редком дропе */
+        .rare-alert {
+            position: fixed; top: 20%; left: 50%; transform: translate(-50%, -50%);
+            font-family: 'Orbitron', sans-serif; font-size: 2.5rem; font-weight: 900;
+            color: #fff; z-index: 200; pointer-events: none; opacity: 0; text-align: center;
+            width: 100%;
+        }
+        .epic-anim { animation: epicText 2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes epicText {
+            0% { opacity: 0; transform: translate(-50%, 50px) scale(0.5) skewX(20deg); filter: blur(10px); }
+            15% { opacity: 1; transform: translate(-50%, -50%) scale(1.2) skewX(0deg); filter: blur(0px); }
+            80% { opacity: 1; transform: translate(-50%, -60%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -100%) scale(1.5); filter: blur(10px); }
+        }
+
+        /* Карточки (Склад, Магазин, Профиль) */
+        .section-title {
+            margin-bottom: 20px; font-family: 'Orbitron', sans-serif; color: var(--accent-primary);
+            text-transform: uppercase; letter-spacing: 2px; font-size: 1.2rem;
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+        }
+
+        .card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            border-radius: 20px; padding: 20px; margin-bottom: 15px;
+            display: flex; justify-content: space-between; align-items: center;
+            backdrop-filter: blur(12px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+        .card-info { display: flex; flex-direction: column; gap: 6px; }
+        .card-title { font-weight: 800; display: flex; align-items: center; gap: 10px; font-size: 1.15rem; }
+        .card-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.3; max-width: 200px;}
+
+        button.action-btn {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: #fff; font-weight: 800; border: none; padding: 12px 20px;
+            border-radius: 14px; font-size: 0.95rem; cursor: pointer; 
+            box-shadow: 0 4px 15px rgba(112, 0, 255, 0.3); transition: all 0.2s;
+        }
+        button.action-btn:active { transform: scale(0.92); box-shadow: 0 2px 5px rgba(112, 0, 255, 0.3); }
+        button:disabled { background: rgba(255,255,255,0.05); color: #555; box-shadow: none; cursor: not-allowed; }
+
+        /* Профиль */
+        .profile-header {
+            text-align: center; margin-bottom: 30px;
+        }
+        .avatar-placeholder {
+            width: 90px; height: 90px; background: linear-gradient(45deg, #2a0845, #6441A5);
+            border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; border: 3px solid var(--accent-primary); box-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+        }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .stat-box {
+            background: var(--glass-bg); padding: 15px; border-radius: 16px;
+            border: 1px solid var(--glass-border); text-align: center;
+        }
+        .stat-box-value { font-family: 'Orbitron', sans-serif; font-size: 1.4rem; color: var(--accent-primary); margin-top: 5px;}
+
+        /* Кнопка продажи */
+        .sell-wrapper {
+            position: fixed; bottom: 85px; left: 0; width: 100%;
+            padding: 15px 20px; background: linear-gradient(to top, rgba(5,5,16,1) 40%, rgba(5,5,16,0));
+            z-index: 90; pointer-events: none;
+        }
+        .sell-all-btn {
+            background: linear-gradient(90deg, #ff007f, #ff4b2b); pointer-events: auto;
+            color: white; font-weight: 900; border: none; text-transform: uppercase;
+            width: 100%; padding: 20px; border-radius: 18px; font-size: 1.2rem;
+            box-shadow: 0 8px 25px rgba(255, 0, 127, 0.4); cursor: pointer;
+            transition: transform 0.2s; border: 1px solid rgba(255,255,255,0.2);
+        }
+        .sell-all-btn:active { transform: scale(0.97); }
+
+        /* Навигация */
+        nav {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: rgba(10, 12, 25, 0.85); backdrop-filter: blur(25px);
+            display: flex; justify-content: space-around; padding: 15px 0 25px;
+            border-top: 1px solid var(--glass-border); z-index: 100;
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center; width: 25%;
+            color: var(--text-muted); font-weight: 600; font-size: 0.75rem; cursor: pointer; gap: 6px;
+            transition: all 0.3s ease;
+        }
+        .nav-item.active { color: var(--accent-primary); transform: translateY(-3px); }
+        .nav-item .icon { font-size: 1.5rem; transition: 0.3s; filter: grayscale(100%); opacity: 0.6;}
+        .nav-item.active .icon { filter: grayscale(0%); opacity: 1; text-shadow: 0 0 15px var(--accent-primary); }
+
+        /* Админка */
+        .admin-panel {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 500; display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            gap: 20px; font-family: 'Orbitron', sans-serif; backdrop-filter: blur(10px);
+        }
+
+        /* Цвета редкостей */
+        .r-common { color: #a8b2c1; }
+        .r-rare { color: #00e5ff; text-shadow: 0 0 10px rgba(0, 229, 255, 0.4); }
+        .r-epic { color: #b388ff; text-shadow: 0 0 15px rgba(179, 136, 255, 0.5); }
+        .r-legendary { color: #ffd700; text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+        .r-mythic { color: #ff007f; text-shadow: 0 0 25px rgba(255, 0, 127, 0.6); }
+    </style>
+</head>
+<body>
+
+    <div id="flash-overlay"></div>
+
+    <header>
+        <div class="logo">MINING CORE</div>
+        <div class="stats">
+            <div class="stat-item" id="secret-trigger" onclick="adminTrigger()">
+                <span>💰</span> <span id="ui-coins" style="color: #ffd700;">0</span>
+            </div>
+            <div class="stat-item">
+                <span>⚡</span> <span id="ui-power" style="color: #00f0ff;">1</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+
+        <div id="mining" class="tab-content active">
+            <div class="rock-wrapper">
+                <div class="cyber-rock" id="the-rock" onclick="mine(event)"></div>
+            </div>
+            <div id="click-rate" style="margin-top: 40px; font-size: 1rem; color: var(--text-muted); background: var(--glass-bg); padding: 10px 20px; border-radius: 20px; border: 1px solid var(--glass-border);">
+                Авто-сбор: <span style="color:var(--accent-primary); font-weight: 800;" id="ui-auto">0</span> 💰/сек
+            </div>
+        </div>
+
+        <div id="inventory" class="tab-content">
+            <h3 class="section-title">Склад руды</h3>
+            <div id="inventory-list" style="padding-bottom: 80px;"></div>
+            
+            <div class="sell-wrapper">
+                <button class="sell-all-btn" onclick="sellAll()">Синтезировать в 💰</button>
+            </div>
+        </div>
+
+        <div id="shop" class="tab-content">
+            <h3 class="section-title">Модернизация</h3>
+            <div id="shop-list"></div>
+        </div>
+
+        <div id="profile" class="tab-content">
+            <h3 class="section-title">Данные пилота</h3>
+            
+            <div class="profile-header">
+                <div class="avatar-placeholder">🧑‍🚀</div>
+                <h2 id="ui-rank" style="font-family: 'Orbitron'; color: var(--accent-primary);">Новичок</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">Текущий ранг</p>
+            </div>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Всего кликов</div>
+                    <div class="stat-box-value" id="stat-clicks">0</div>
+                </div>
+                <div class="stat-box">
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Всего заработано</div>
+                    <div class="stat-box-value" id="stat-earned">0</div>
+                </div>
+                <div class="stat-box">
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Шанс крита</div>
+                    <div class="stat-box-value" id="stat-crit">0%</div>
+                </div>
+                <div class="stat-box">
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">Множитель удачи</div>
+                    <div class="stat-box-value" id="stat-luck">x1.0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav>
+        <div class="nav-item active" onclick="switchTab('mining', this)">
+            <span class="icon">⛏️</span> Добыча
+        </div>
+        <div class="nav-item" onclick="switchTab('inventory', this)">
+            <span class="icon">📦</span> Склад
+        </div>
+        <div class="nav-item" onclick="switchTab('shop', this)">
+            <span class="icon">🛠️</span> Магазин
+        </div>
+        <div class="nav-item" onclick="switchTab('profile', this)">
+            <span class="icon">👤</span> Профиль
+        </div>
+    </nav>
+
+    <div id="rare-banner" class="rare-alert"></div>
+
+    <div id="admin-p" class="admin-panel">
+        <h1 style="color: #ff007f; text-shadow: 0 0 20px #ff007f;">CONSOLE RECOVERY</h1>
+        <p>Доступ разработчика открыт</p>
+        <button class="action-btn" onclick="cheatCoins()" style="background: #ff007f; color: white; width: 80%;">+1 000 000 💰</button>
+        <button class="action-btn" onclick="cheatClear()" style="background: #333; color: white; width: 80%;">Сбросить инвентарь</button>
+        <button class="action-btn" onclick="document.getElementById('admin-p').style.display='none';" style="background: white; color: black; margin-top: 30px; width: 80%;">❌ ВЫЙТИ</button>
+    </div>
+
+<script>
+    // Проверка, запущено ли приложение внутри Telegram.
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : {
+        expand: () => {},
+        HapticFeedback: { impactOccurred: () => {}, notificationOccurred: () => {} }
+    };
+    tg.expand();
+
+    // Стандартное состояние игры (шаблон)
+    let game = {
+        coins: 0,
+        stats: { totalClicks: 0, totalEarned: 0 },
+        inventory: { stone: 0, coal: 0, iron: 0, gold: 0, amethyst: 0, sapphire: 0, diamond: 0, mythic: 0 },
+        upgrades: {
+            power: { level: 1, base: 50, mult: 1.6, name: 'Плазменный Бур', desc: 'Увеличивает добычу за одно нажатие' },
+            luck: { level: 1, base: 300, mult: 2.5, name: 'Матрица Удачи', desc: 'Повышает вероятность редких минералов' },
+            auto: { level: 0, base: 1000, mult: 2.0, name: 'Дроны-Копатели', desc: 'Автоматический сбор ресурсов каждую секунду' },
+            crit: { level: 1, base: 500, mult: 1.8, name: 'Резонансный Удар', desc: 'Увеличивает шанс х5 добычи при клике' }
+        }
+    };
+
+    const crystals = [
+        { id: 'mythic', name: 'Сверхновая', icon: '🌌', class: 'r-mythic', chance: 0.00001, price: 250000 },
+        { id: 'diamond', name: 'Чистый Алмаз', icon: '💎', class: 'r-legendary', chance: 0.0005, price: 5000 },
+        { id: 'sapphire', name: 'Сапфир Бездны', icon: '🔷', class: 'r-epic', chance: 0.005, price: 800 },
+        { id: 'amethyst', name: 'Аметист', icon: '🔮', class: 'r-rare', chance: 0.05, price: 100 },
+        { id: 'gold', name: 'Золотой Сплав', icon: '🪙', class: 'r-rare', chance: 0.2, price: 20 },
+        { id: 'iron', name: 'Железная Руда', icon: '⚙️', class: 'r-common', chance: 0.5, price: 5 },
+        { id: 'coal', name: 'Углерод', icon: '⚫', class: 'r-common', chance: 0.8, price: 1 },
+        { id: 'stone', name: 'Порода', icon: '🪨', class: 'r-common', chance: 1.0, price: 0.2 }
+    ];
+
+    // --- СИСТЕМА СОХРАНЕНИЙ ---
+    function saveGame() {
+        localStorage.setItem('miningSaveData', JSON.stringify(game));
+    }
+
+    function loadGame() {
+        let savedData = localStorage.getItem('miningSaveData');
+        if (savedData) {
+            try {
+                let parsed = JSON.parse(savedData);
+                // Аккуратно склеиваем сохранения, чтобы не затереть новые предметы, если ты их добавишь в будущем
+                game.coins = parsed.coins || 0;
+                game.stats = { ...game.stats, ...parsed.stats };
+                game.inventory = { ...game.inventory, ...parsed.inventory };
+                game.upgrades = { ...game.upgrades, ...parsed.upgrades };
+            } catch (e) {
+                console.error("Ошибка загрузки сохранения", e);
+            }
+        }
+    }
+
+    function mine(e) {
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+        
+        if (e) game.stats.totalClicks++; 
+
+        let power = game.upgrades.power.level;
+        let luck = game.upgrades.luck.level;
+        let critLevel = game.upgrades.crit.level;
+
+        let rollCrit = Math.random();
+        let isCrit = rollCrit < (critLevel * 0.05);
+        if (isCrit) power *= 5;
+
+        for (let i = 0; i < power; i++) {
+            let roll = Math.random();
+            let luckMultiplier = 1 + (luck * 0.2);
+
+            for (let crystal of crystals) {
+                if (roll <= crystal.chance * luckMultiplier || crystal.id === 'stone') {
+                    game.inventory[crystal.id]++;
+                    if(e) createParticle(e, crystal, isCrit);
+                    
+                    if(crystal.chance <= 0.005 && e) {
+                        fireEpicAnimation(crystal);
+                    }
+                    break;
+                }
+            }
+        }
+        updateUI();
+    }
+
+    function createParticle(e, crystal, isCrit) {
+        const wrap = document.querySelector('.rock-wrapper');
+        const count = isCrit ? 6 : 1;
+
+        for(let i=0; i < count; i++) {
+            const p = document.createElement('div');
+            p.className = `particle ${crystal.class}`;
+            p.innerText = crystal.icon;
+
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 100 + Math.random() * 80;
+            
+            p.style.setProperty('--mx', `${Math.cos(angle) * distance}px`);
+            p.style.setProperty('--my', `${Math.sin(angle) * distance}px`);
+            p.style.setProperty('--mr', `${(Math.random() - 0.5) * 360}deg`);
+
+            wrap.appendChild(p);
+            setTimeout(() => p.remove(), 800);
+        }
+    }
+
+    function fireEpicAnimation(crystal) {
+        const banner = document.getElementById('rare-banner');
+        banner.innerHTML = `НАЙДЕН<br><span class="${crystal.class}" style="font-size:3rem; text-shadow: none;">${crystal.name}!</span>`;
+        
+        banner.classList.remove('epic-anim');
+        void banner.offsetWidth; 
+        banner.classList.add('epic-anim');
+
+        document.body.classList.add('shake');
+        const flash = document.getElementById('flash-overlay');
+        flash.style.opacity = '1';
+        
+        setTimeout(() => flash.style.opacity = '0', 50);
+        setTimeout(() => document.body.classList.remove('shake'), 400);
+
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    }
+
+    let adminClicks = 0;
+    function adminTrigger() {
+        adminClicks++;
+        if(adminClicks >= 5) {
+            document.getElementById('admin-p').style.display = 'flex';
+            adminClicks = 0;
+        }
+    }
+
+    function cheatCoins() {
+        game.coins += 1000000;
+        game.stats.totalEarned += 1000000;
+        updateUI();
+        saveGame();
+    }
+    function cheatClear() {
+        // Жесткий сброс сохранения
+        localStorage.removeItem('miningSaveData');
+        location.reload(); // Перезагружаем страницу, чтобы сбросить всё наверняка
+    }
+
+    function switchTab(tabId, el) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
+
+        document.getElementById(tabId).classList.add('active');
+        el.classList.add('active');
+
+        if(tabId === 'shop') renderShop();
+        if(tabId === 'inventory') renderInventory();
+        if(tabId === 'profile') renderProfile();
+    }
+
+    function sellAll() {
+        let earned = 0;
+        for (let crystal of crystals) {
+            earned += game.inventory[crystal.id] * crystal.price;
+            game.inventory[crystal.id] = 0;
+        }
+
+        if (earned > 0) {
+            game.coins += earned;
+            game.stats.totalEarned += earned;
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            updateUI();
+            renderInventory();
+            saveGame(); // Сохраняем после продажи
+            
+            const btn = document.querySelector('.sell-all-btn');
+            btn.innerText = `+${Math.floor(earned)} 💰`;
+            setTimeout(() => btn.innerText = "Синтезировать в 💰", 1000);
+        }
+    }
+
+    function buyUpgrade(id) {
+        let upg = game.upgrades[id];
+        let price = calculatePrice(upg, id);
+
+        if (game.coins >= price) {
+            game.coins -= price;
+            upg.level++;
+            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
+            updateUI();
+            renderShop();
+            saveGame(); // Сохраняем после покупки
+        }
+    }
+
+    function calculatePrice(upg, id) {
+        return Math.floor(upg.base * Math.pow(upg.mult, upg.level - (id === 'auto' ? 0 : 1)));
+    }
+
+    function getRank() {
+        const lvl = game.upgrades.power.level;
+        if (lvl > 50) return "Космический Лорд 👑";
+        if (lvl > 30) return "Мастер Шахты 💎";
+        if (lvl > 15) return "Опытный Бурильщик 🚀";
+        if (lvl > 5) return "Инженер-Стажер ⚙️";
+        return "Новичок 🧑‍🚀";
+    }
+
+    function updateUI() {
+        const formatNum = (num) => num > 10000 ? (num/1000).toFixed(1) + 'k' : Math.floor(num);
+        
+        document.getElementById('ui-coins').innerText = formatNum(game.coins);
+        document.getElementById('ui-power').innerText = game.upgrades.power.level;
+        document.getElementById('ui-auto').innerText = game.upgrades.auto.level;
+    }
+
+    function renderShop() {
+        const list = document.getElementById('shop-list');
+        list.innerHTML = '';
+        for (let [id, upg] of Object.entries(game.upgrades)) {
+            let price = calculatePrice(upg, id);
+            list.innerHTML += `
+                <div class="card">
+                    <div class="card-info">
+                        <span class="card-title">Ур. ${upg.level} | ${upg.name}</span>
+                        <span class="card-desc">${upg.desc}</span>
+                    </div>
+                    <button class="action-btn" onclick="buyUpgrade('${id}')" ${game.coins < price ? 'disabled' : ''}>
+                        ${Math.floor(price)} 💰
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    function renderInventory() {
+        const list = document.getElementById('inventory-list');
+        list.innerHTML = '';
+        let hasItems = false;
+        
+        crystals.forEach(c => {
+            const count = game.inventory[c.id];
+            if (count > 0 || c.id === 'stone') {
+                hasItems = true;
+                list.innerHTML += `
+                    <div class="card">
+                        <div class="card-info">
+                            <span class="card-title ${c.class}">${c.icon} ${c.name} <span style="color:#fff;">(x${count})</span></span>
+                            <span class="card-desc">Стоимость: ${c.price} 💰 / шт</span>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+        
+        if(!hasItems) list.innerHTML = `<div style="text-align:center; color: #888; margin-top: 50px;">Склад пуст</div>`;
+    }
+
+    function renderProfile() {
+        document.getElementById('stat-clicks').innerText = game.stats.totalClicks;
+        document.getElementById('stat-earned').innerText = Math.floor(game.stats.totalEarned);
+        document.getElementById('ui-rank').innerText = getRank();
+        
+        const critChance = Math.min(game.upgrades.crit.level * 5, 100);
+        document.getElementById('stat-crit').innerText = critChance + '%';
+        
+        const luckMult = (1 + (game.upgrades.luck.level * 0.2)).toFixed(1);
+        document.getElementById('stat-luck').innerText = 'x' + luckMult;
+    }
+
+    // Авто-фарм (переделан для корректного сохранения)
+    setInterval(() => {
+        if(game.upgrades.auto.level > 0) {
+            for(let i=0; i < game.upgrades.auto.level; i++) {
+                mine(null); 
+            }
+        }
+    }, 1000);
+
+    // Автосохранение каждые 5 секунд
+    setInterval(saveGame, 5000);
+
+    // --- ИНИЦИАЛИЗАЦИЯ ПРИ ЗАПУСКЕ ---
+    loadGame();  // 1. Сначала загружаем данные
+    updateUI();  // 2. Затем обновляем интерфейс на основе этих данных
+</script>
+</body>
+</html>

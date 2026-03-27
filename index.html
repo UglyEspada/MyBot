@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dark Arena X</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: radial-gradient(circle, #222, #000);
+    color: white;
+    overflow: hidden;
+}
+
+/* ===== MENU ===== */
+#menu {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(#111, #000);
+}
+
+.title {
+    font-size: 40px;
+    margin-bottom: 30px;
+    text-shadow: 0 0 20px red;
+}
+
+.menu-btn {
+    padding: 15px 30px;
+    margin: 10px;
+    font-size: 20px;
+    background: #111;
+    border: 2px solid red;
+    color: white;
+    border-radius: 10px;
+}
+
+/* ===== GAME ===== */
+#game {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+.player {
+    width: 60px;
+    height: 60px;
+    position: absolute;
+    bottom: 80px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(255,0,0,0.5);
+}
+
+#me { background: red; }
+#enemy { background: cyan; }
+
+/* HP */
+.hpbar {
+    position: absolute;
+    height: 12px;
+    background: lime;
+    box-shadow: 0 0 10px lime;
+}
+
+#myhp { left: 10px; top: 10px; width: 40%; }
+#enemyhp { right: 10px; top: 10px; width: 40%; }
+
+/* EFFECT */
+.hit {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background: orange;
+    opacity: 0.7;
+    border-radius: 50%;
+    animation: boom 0.3s;
+}
+
+@keyframes boom {
+    from { transform: scale(0.5); opacity: 1; }
+    to { transform: scale(2); opacity: 0; }
+}
+
+/* CONTROLS */
+.controls {
+    position: fixed;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+}
+
+button {
+    font-size: 22px;
+    padding: 10px;
+    margin: 5px;
+    border-radius: 10px;
+    border: none;
+    background: #111;
+    color: white;
+    box-shadow: 0 0 10px red;
+}
+</style>
+</head>
+
+<body>
+
+<!-- MENU -->
+<div id="menu">
+    <div class="title">DARK ARENA</div>
+    <button class="menu-btn" onclick="startGame()">🎮 Play</button>
+    <button class="menu-btn">⚙️ Settings</button>
+</div>
+
+<!-- GAME -->
+<div id="game">
+    <div id="myhp" class="hpbar"></div>
+    <div id="enemyhp" class="hpbar"></div>
+
+    <div id="me" class="player"></div>
+    <div id="enemy" class="player"></div>
+</div>
+
+<div class="controls">
+    <button onclick="move(-20)">⬅️</button>
+    <button onclick="jump()">⬆️</button>
+    <button onclick="move(20)">➡️</button>
+    <button onclick="attack()">⚔️</button>
+</div>
+
+<script>
+const ws = new WebSocket("wss://ТВОЙ-СЕРВЕР")
+
+let me = { x: 100, y: 0, hp: 100 }
+let enemy = { x: 300, y: 0, hp: 100 }
+
+function startGame() {
+    document.getElementById("menu").style.display = "none"
+    document.getElementById("game").style.display = "block"
+}
+
+function update() {
+    document.getElementById("me").style.left = me.x + "px"
+    document.getElementById("enemy").style.left = enemy.x + "px"
+
+    document.getElementById("myhp").style.width = me.hp + "%"
+    document.getElementById("enemyhp").style.width = enemy.hp + "%"
+}
+
+function move(dx) {
+    me.x += dx
+    ws.send(JSON.stringify({ type: "move", x: me.x }))
+    update()
+}
+
+function jump() {
+    let t = 0
+    let interval = setInterval(() => {
+        t += 0.1
+        me.y = Math.sin(t) * 80
+        document.getElementById("me").style.bottom = (80 + me.y) + "px"
+        if (t > Math.PI) clearInterval(interval)
+    }, 16)
+}
+
+function attack() {
+    ws.send(JSON.stringify({ type: "attack", x: me.x }))
+
+    let hit = document.createElement("div")
+    hit.className = "hit"
+    hit.style.left = me.x + "px"
+    hit.style.bottom = "100px"
+    document.getElementById("game").appendChild(hit)
+
+    setTimeout(() => hit.remove(), 300)
+}
+
+ws.onmessage = (msg) => {
+    const data = JSON.parse(msg.data)
+
+    if (data.type === "move") {
+        enemy.x = data.x
+    }
+
+    if (data.type === "attack") {
+        if (Math.abs(me.x - data.x) < 80) {
+            me.hp -= 10
+        }
+    }
+
+    update()
+}
+</script>
+
+</body>
+</html>
